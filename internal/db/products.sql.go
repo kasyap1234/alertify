@@ -41,3 +41,58 @@ func (q *Queries) AddProduct(ctx context.Context, arg AddProductParams) (Product
 	)
 	return i, err
 }
+
+type AddProductsParams struct {
+	ID            int32
+	Name          string
+	Sku           pgtype.Text
+	StockQuantity int32
+	Threshold     int32
+}
+
+const getProduct = `-- name: GetProduct :one
+SELECT id, name, sku, stock_quantity, threshold FROM products WHERE id=$1
+`
+
+func (q *Queries) GetProduct(ctx context.Context, id int32) (Product, error) {
+	row := q.db.QueryRow(ctx, getProduct, id)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Sku,
+		&i.StockQuantity,
+		&i.Threshold,
+	)
+	return i, err
+}
+
+const getProductsBySKU = `-- name: GetProductsBySKU :many
+SELECT id, name, sku, stock_quantity, threshold FROM products WHERE sku=$1
+`
+
+func (q *Queries) GetProductsBySKU(ctx context.Context, sku pgtype.Text) ([]Product, error) {
+	rows, err := q.db.Query(ctx, getProductsBySKU, sku)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Product
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Sku,
+			&i.StockQuantity,
+			&i.Threshold,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
