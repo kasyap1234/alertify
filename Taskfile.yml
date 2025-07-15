@@ -1,0 +1,30 @@
+# https://taskfile.dev
+
+version: '3'
+
+dotenv:
+  - ".env"
+
+vars:
+  GREETING: HELLO,ALERTIFY!
+
+tasks:
+  default:
+    desc: hello alertify
+    cmds:
+      - echo "{{.GREETING}}"
+
+  migrate:up:
+    desc: Run all up migrations
+    cmds:
+      - migrate -path sql/migrations -database "$DATABASE_URL" up
+
+  migrate:down:
+    desc: Roll back latest migration
+    cmds:
+      - migrate -path sql/migrations -database "$DATABASE_URL" down 1
+
+  run:db-dev:
+    desc: Start postgres container
+    cmds:
+      - docker compose up -d db
