@@ -7,6 +7,7 @@ import (
 	"time"
 
 	config2 "alertify/internal/config"
+	"alertify/internal/db"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
@@ -64,5 +65,6 @@ func main() {
 
 	log.Info().Msg("connected to database")
 	defer pool.Close()
+	queries := db.New(pool)
 
 }
