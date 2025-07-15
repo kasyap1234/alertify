@@ -33,7 +33,7 @@ func (s *ProductService) AddProduct(ctx context.Context, input CreateProductInpu
 		return nil, err
 	}
 	if input.StockQuantity < 0 || input.Threshold < 0 {
-		err := errors.New("quantity shoule a postive number")
+		err := errors.New("quantity should be a positive number")
 		log.Error().Err(err).Msg("invalid quantity or threshold")
 		return nil, err
 
