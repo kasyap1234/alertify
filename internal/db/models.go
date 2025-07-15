@@ -20,4 +20,6 @@ type Product struct {
 	Sku           pgtype.Text
 	StockQuantity int32
 	Threshold     int32
+	CreatedAt     pgtype.Timestamp
+	UpdatedAt     pgtype.Timestamp
 }

@@ -1,5 +1,5 @@
 -- name: AddProduct :one
-INSERT INTO products (id, name, sku, stock_quantity, threshold) VALUES ($1,$2,$3,$4,$5) RETURNING  *;
+INSERT INTO products (name, sku, stock_quantity, threshold) VALUES ($1,$2,$3,$4) RETURNING  *;
 
 
 -- name: GetProduct :one
@@ -10,3 +10,18 @@ INSERT INTO products (id,name,sku,stock_quantity,threshold) VALUES ($1,$2,$3,$4,
 
 -- name: GetProductsBySKU :many
 SELECT * FROM products WHERE sku=$1;
+
+-- name: ListProducts :many
+SELECT * FROM products ORDER BY created_at DESC;
+
+-- name: UpdateProductStock :exec
+UPDATE  products SET stock_quantity=$1 WHERE id=$2;
+
+-- name: GetProductQuantity :one
+SELECT products.stock_quantity FROM products WHERE id=$1;
+
+-- name: GetProductsByName :many
+SELECT * FROM products WHERE name=$1;
+
+-- name: SearchProductsByName :many
+SELECT * FROM products WHERE name ILIKE $1 || '%';

@@ -12,11 +12,10 @@ import (
 )
 
 const addProduct = `-- name: AddProduct :one
-INSERT INTO products (id, name, sku, stock_quantity, threshold) VALUES ($1,$2,$3,$4,$5) RETURNING  id, name, sku, stock_quantity, threshold
+INSERT INTO products (name, sku, stock_quantity, threshold) VALUES ($1,$2,$3,$4) RETURNING  id, name, sku, stock_quantity, threshold, created_at, updated_at
 `
 
 type AddProductParams struct {
-	ID            int32
 	Name          string
 	Sku           pgtype.Text
 	StockQuantity int32
@@ -25,7 +24,6 @@ type AddProductParams struct {
 
 func (q *Queries) AddProduct(ctx context.Context, arg AddProductParams) (Product, error) {
 	row := q.db.QueryRow(ctx, addProduct,
-		arg.ID,
 		arg.Name,
 		arg.Sku,
 		arg.StockQuantity,
@@ -38,6 +36,8 @@ func (q *Queries) AddProduct(ctx context.Context, arg AddProductParams) (Product
 		&i.Sku,
 		&i.StockQuantity,
 		&i.Threshold,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -51,7 +51,7 @@ type AddProductsParams struct {
 }
 
 const getProduct = `-- name: GetProduct :one
-SELECT id, name, sku, stock_quantity, threshold FROM products WHERE id=$1
+SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE id=$1
 `
 
 func (q *Queries) GetProduct(ctx context.Context, id int32) (Product, error) {
@@ -63,12 +63,57 @@ func (q *Queries) GetProduct(ctx context.Context, id int32) (Product, error) {
 		&i.Sku,
 		&i.StockQuantity,
 		&i.Threshold,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
+const getProductQuantity = `-- name: GetProductQuantity :one
+SELECT products.stock_quantity FROM products WHERE id=$1
+`
+
+func (q *Queries) GetProductQuantity(ctx context.Context, id int32) (int32, error) {
+	row := q.db.QueryRow(ctx, getProductQuantity, id)
+	var stock_quantity int32
+	err := row.Scan(&stock_quantity)
+	return stock_quantity, err
+}
+
+const getProductsByName = `-- name: GetProductsByName :many
+SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE name=$1
+`
+
+func (q *Queries) GetProductsByName(ctx context.Context, name string) ([]Product, error) {
+	rows, err := q.db.Query(ctx, getProductsByName, name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Product
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Sku,
+			&i.StockQuantity,
+			&i.Threshold,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProductsBySKU = `-- name: GetProductsBySKU :many
-SELECT id, name, sku, stock_quantity, threshold FROM products WHERE sku=$1
+SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE sku=$1
 `
 
 func (q *Queries) GetProductsBySKU(ctx context.Context, sku pgtype.Text) ([]Product, error) {
@@ -86,6 +131,8 @@ func (q *Queries) GetProductsBySKU(ctx context.Context, sku pgtype.Text) ([]Prod
 			&i.Sku,
 			&i.StockQuantity,
 			&i.Threshold,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -95,4 +142,82 @@ func (q *Queries) GetProductsBySKU(ctx context.Context, sku pgtype.Text) ([]Prod
 		return nil, err
 	}
 	return items, nil
+}
+
+const listProducts = `-- name: ListProducts :many
+SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products ORDER BY created_at DESC
+`
+
+func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
+	rows, err := q.db.Query(ctx, listProducts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Product
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Sku,
+			&i.StockQuantity,
+			&i.Threshold,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const searchProductsByName = `-- name: SearchProductsByName :many
+SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE name ILIKE $1 || '%'
+`
+
+func (q *Queries) SearchProductsByName(ctx context.Context, dollar_1 pgtype.Text) ([]Product, error) {
+	rows, err := q.db.Query(ctx, searchProductsByName, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Product
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Sku,
+			&i.StockQuantity,
+			&i.Threshold,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateProductStock = `-- name: UpdateProductStock :exec
+UPDATE  products SET stock_quantity=$1 WHERE id=$2
+`
+
+type UpdateProductStockParams struct {
+	StockQuantity int32
+	ID            int32
+}
+
+func (q *Queries) UpdateProductStock(ctx context.Context, arg UpdateProductStockParams) error {
+	_, err := q.db.Exec(ctx, updateProductStock, arg.StockQuantity, arg.ID)
+	return err
 }

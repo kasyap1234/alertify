@@ -28,3 +28,7 @@ tasks:
     desc: Start postgres container
     cmds:
       - docker compose up -d db
+  generate-sqlc:
+    desc: generate sql code using sqlc
+    cmds:
+      - sqlc generate
