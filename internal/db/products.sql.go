@@ -144,36 +144,23 @@ func (q *Queries) GetProductsByName(ctx context.Context, name string) ([]Product
 	return items, nil
 }
 
-const getProductsBySKU = `-- name: GetProductsBySKU :many
+const getProductsBySKU = `-- name: GetProductsBySKU :one
 SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE sku=$1
 `
 
-func (q *Queries) GetProductsBySKU(ctx context.Context, sku pgtype.Text) ([]Product, error) {
-	rows, err := q.db.Query(ctx, getProductsBySKU, sku)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Product
-	for rows.Next() {
-		var i Product
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.Sku,
-			&i.StockQuantity,
-			&i.Threshold,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetProductsBySKU(ctx context.Context, sku pgtype.Text) (Product, error) {
+	row := q.db.QueryRow(ctx, getProductsBySKU, sku)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Sku,
+		&i.StockQuantity,
+		&i.Threshold,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const listProducts = `-- name: ListProducts :many

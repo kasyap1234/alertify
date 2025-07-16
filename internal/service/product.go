@@ -13,6 +13,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+var ErrNotFound = errors.New("not found")
+
 type ProductService struct {
 	db      *pgxpool.Pool
 	queries *db.Queries
@@ -81,4 +83,17 @@ func (s *ProductService) GetLowStockProducts(ctx context.Context) ([]db.Product,
 		log.Error().Err(err).Msg("failed to get low stock products")
 	}
 	return products, nil
+}
+
+func (s *ProductService) GetProductBySKU(ctx context.Context, sku string) (db.Product, error) {
+	skuString := utils.ToPgText(sku)
+	product, err := s.queries.GetProductsBySKU(ctx, skuString)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return db.Product{}, ErrNotFound
+		}
+		log.Error().Err(err).Msg("failed to get product by sku")
+		return db.Product{}, errors.New("failed to get sku")
+	}
+	return product, nil
 }
