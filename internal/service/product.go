@@ -14,7 +14,8 @@ import (
 )
 
 type ProductService struct {
-	db *pgxpool.Pool
+	db      *pgxpool.Pool
+	queries *db.Queries
 }
 
 func NewProductService(db *pgxpool.Pool) *ProductService {
@@ -72,4 +73,12 @@ func (s *ProductService) AddProduct(ctx context.Context, input CreateProductInpu
 
 	// Success
 	return &product, nil
+}
+
+func (s *ProductService) GetLowStockProducts(ctx context.Context) ([]db.Product, error) {
+	products, err := s.queries.GetLowStockProducts(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get low stock products")
+	}
+	return products, nil
 }

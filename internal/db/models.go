@@ -9,9 +9,10 @@ import (
 )
 
 type Alert struct {
-	ID        pgtype.UUID
-	ProductID pgtype.Int4
-	CreatedAt pgtype.Timestamptz
+	ID           pgtype.UUID
+	ProductID    pgtype.Int4
+	AlertMessage string
+	CreatedAt    pgtype.Timestamptz
 }
 
 type Product struct {

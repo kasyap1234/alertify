@@ -25,3 +25,7 @@ SELECT * FROM products WHERE name=$1;
 
 -- name: SearchProductsByName :many
 SELECT * FROM products WHERE name ILIKE $1 || '%';
+
+
+-- name: GetLowStockProducts :many
+SELECT * FROM products WHERE stock_quantity < threshold;

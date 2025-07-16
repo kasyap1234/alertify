@@ -50,6 +50,38 @@ type AddProductsParams struct {
 	Threshold     int32
 }
 
+const getLowStockProducts = `-- name: GetLowStockProducts :many
+SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE stock_quantity < threshold
+`
+
+func (q *Queries) GetLowStockProducts(ctx context.Context) ([]Product, error) {
+	rows, err := q.db.Query(ctx, getLowStockProducts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Product
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Sku,
+			&i.StockQuantity,
+			&i.Threshold,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getProduct = `-- name: GetProduct :one
 SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE id=$1
 `
