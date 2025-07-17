@@ -50,6 +50,20 @@ type AddProductsParams struct {
 	Threshold     int32
 }
 
+const decrementProductStock = `-- name: DecrementProductStock :exec
+UPDATE products SET stock_quantity=stock_quantity - $1 WHERE id=$2
+`
+
+type DecrementProductStockParams struct {
+	StockQuantity int32
+	ID            int32
+}
+
+func (q *Queries) DecrementProductStock(ctx context.Context, arg DecrementProductStockParams) error {
+	_, err := q.db.Exec(ctx, decrementProductStock, arg.StockQuantity, arg.ID)
+	return err
+}
+
 const getLowStockProducts = `-- name: GetLowStockProducts :many
 SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE stock_quantity < threshold
 `
@@ -163,12 +177,63 @@ func (q *Queries) GetProductsBySKU(ctx context.Context, sku pgtype.Text) (Produc
 	return i, err
 }
 
+const incrementProductStock = `-- name: IncrementProductStock :exec
+UPDATE products SET stock_quantity=stock_quantity +$1 WHERE id=$2
+`
+
+type IncrementProductStockParams struct {
+	StockQuantity int32
+	ID            int32
+}
+
+func (q *Queries) IncrementProductStock(ctx context.Context, arg IncrementProductStockParams) error {
+	_, err := q.db.Exec(ctx, incrementProductStock, arg.StockQuantity, arg.ID)
+	return err
+}
+
 const listProducts = `-- name: ListProducts :many
 SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products ORDER BY created_at DESC
 `
 
 func (q *Queries) ListProducts(ctx context.Context) ([]Product, error) {
 	rows, err := q.db.Query(ctx, listProducts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Product
+	for rows.Next() {
+		var i Product
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Sku,
+			&i.StockQuantity,
+			&i.Threshold,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductsPaginated = `-- name: ListProductsPaginated :many
+SELECT  id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products ORDER BY created_at DESC LIMIT $1 OFFSET $2
+`
+
+type ListProductsPaginatedParams struct {
+	Limit  int32
+	Offset int32
+}
+
+func (q *Queries) ListProductsPaginated(ctx context.Context, arg ListProductsPaginatedParams) ([]Product, error) {
+	rows, err := q.db.Query(ctx, listProductsPaginated, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}

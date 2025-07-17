@@ -97,3 +97,15 @@ func (s *ProductService) GetProductBySKU(ctx context.Context, sku string) (db.Pr
 	}
 	return product, nil
 }
+
+func (s *ProductService) ListProducts(ctx context.Context) ([]db.Product, error) {
+	products, err := s.queries.ListProducts(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return []db.Product{}, ErrNotFound
+		}
+		log.Error().Err(err).Msg("failed to list products")
+		return []db.Product{}, errors.New("faild to list products")
+	}
+	return products, nil
+}
