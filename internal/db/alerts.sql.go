@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createAlert = `-- name: CreateAlert :one
+const createAlert = `-- name: CreateAlert :exec
 INSERT INTO alerts (product_id,alert_message,alert_type,status) VALUES ($1,$2,$3,$4) RETURNING  id, product_id, alert_message, alert_type, status, created_at
 `
 
@@ -22,23 +22,76 @@ type CreateAlertParams struct {
 	Status       interface{}
 }
 
-func (q *Queries) CreateAlert(ctx context.Context, arg CreateAlertParams) (Alert, error) {
-	row := q.db.QueryRow(ctx, createAlert,
+func (q *Queries) CreateAlert(ctx context.Context, arg CreateAlertParams) error {
+	_, err := q.db.Exec(ctx, createAlert,
 		arg.ProductID,
 		arg.AlertMessage,
 		arg.AlertType,
 		arg.Status,
 	)
-	var i Alert
-	err := row.Scan(
-		&i.ID,
-		&i.ProductID,
-		&i.AlertMessage,
-		&i.AlertType,
-		&i.Status,
-		&i.CreatedAt,
-	)
-	return i, err
+	return err
+}
+
+const getAlertsByStatus = `-- name: GetAlertsByStatus :many
+SELECT id, product_id, alert_message, alert_type, status, created_at FROM alerts WHERE status=$1 ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAlertsByStatus(ctx context.Context, status interface{}) ([]Alert, error) {
+	rows, err := q.db.Query(ctx, getAlertsByStatus, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Alert
+	for rows.Next() {
+		var i Alert
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductID,
+			&i.AlertMessage,
+			&i.AlertType,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getPendingAlerts = `-- name: GetPendingAlerts :many
+SELECT id, product_id, alert_message, alert_type, status, created_at FROM alerts WHERE status="pending" ORDER BY created_at DESC
+`
+
+func (q *Queries) GetPendingAlerts(ctx context.Context) ([]Alert, error) {
+	rows, err := q.db.Query(ctx, getPendingAlerts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Alert
+	for rows.Next() {
+		var i Alert
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductID,
+			&i.AlertMessage,
+			&i.AlertType,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAllAlerts = `-- name: ListAllAlerts :many
@@ -70,4 +123,18 @@ func (q *Queries) ListAllAlerts(ctx context.Context) ([]Alert, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateAlert = `-- name: UpdateAlert :exec
+UPDATE alerts SET status=$2 WHERE id=$1
+`
+
+type UpdateAlertParams struct {
+	ID     pgtype.UUID
+	Status interface{}
+}
+
+func (q *Queries) UpdateAlert(ctx context.Context, arg UpdateAlertParams) error {
+	_, err := q.db.Exec(ctx, updateAlert, arg.ID, arg.Status)
+	return err
 }

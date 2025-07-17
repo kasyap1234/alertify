@@ -11,4 +11,6 @@ SELECT * FROM alerts WHERE status="pending" ORDER BY created_at DESC;
 UPDATE alerts SET status=$2 WHERE id=$1;
 
 -- name: GetAlertsByStatus :many
-SELECT * FROM alerts WHERE status=$1 ORDER BY created__at DESC;
+SELECT * FROM alerts WHERE status=$1 ORDER BY created_at DESC;
+
+-- name:
