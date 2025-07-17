@@ -12,8 +12,8 @@ type Alert struct {
 	ID           pgtype.UUID
 	ProductID    pgtype.Int4
 	AlertMessage string
-	AlertType    string
-	Status       string
+	AlertType    interface{}
+	Status       interface{}
 	CreatedAt    pgtype.Timestamptz
 }
 

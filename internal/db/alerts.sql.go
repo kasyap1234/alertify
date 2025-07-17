@@ -18,8 +18,8 @@ INSERT INTO alerts (product_id,alert_message,alert_type,status) VALUES ($1,$2,$3
 type CreateAlertParams struct {
 	ProductID    pgtype.Int4
 	AlertMessage string
-	AlertType    string
-	Status       string
+	AlertType    interface{}
+	Status       interface{}
 }
 
 func (q *Queries) CreateAlert(ctx context.Context, arg CreateAlertParams) (Alert, error) {
@@ -39,4 +39,35 @@ func (q *Queries) CreateAlert(ctx context.Context, arg CreateAlertParams) (Alert
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listAllAlerts = `-- name: ListAllAlerts :many
+SELECT id, product_id, alert_message, alert_type, status, created_at FROM alerts ORDER BY created_at DESC
+`
+
+func (q *Queries) ListAllAlerts(ctx context.Context) ([]Alert, error) {
+	rows, err := q.db.Query(ctx, listAllAlerts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Alert
+	for rows.Next() {
+		var i Alert
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductID,
+			&i.AlertMessage,
+			&i.AlertType,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
