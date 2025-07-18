@@ -13,4 +13,14 @@ UPDATE alerts SET status=$2 WHERE id=$1;
 -- name: GetAlertsByStatus :many
 SELECT * FROM alerts WHERE status=$1 ORDER BY created_at DESC;
 
--- name:
+-- name: GetAllAlerts :many
+SELECT * FROM alerts ORDER BY created_at DESC;
+
+-- name: AcknowledgeAlert :exec
+UPDATE alerts set status="acknowledged" WHERE status="pending";
+
+-- name: AcknowledgeAlerts :many
+SELECT * FROM alerts WHERE status="acknowledged";
+
+-- name: UpdateAlertType :exec
+UPDATE alerts SET alert_type=$2 WHERE id=$1;

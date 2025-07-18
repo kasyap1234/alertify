@@ -115,6 +115,25 @@ func (q *Queries) GetProduct(ctx context.Context, id int32) (Product, error) {
 	return i, err
 }
 
+const getProductByID = `-- name: GetProductByID :one
+SELECT id, name, sku, stock_quantity, threshold, created_at, updated_at FROM products WHERE id=$1
+`
+
+func (q *Queries) GetProductByID(ctx context.Context, id int32) (Product, error) {
+	row := q.db.QueryRow(ctx, getProductByID, id)
+	var i Product
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Sku,
+		&i.StockQuantity,
+		&i.Threshold,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getProductQuantity = `-- name: GetProductQuantity :one
 SELECT products.stock_quantity FROM products WHERE id=$1
 `

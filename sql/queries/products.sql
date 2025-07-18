@@ -39,3 +39,6 @@ UPDATE products SET stock_quantity=stock_quantity - $1 WHERE id=$2;
 
 -- name: ListProductsPaginated :many
 SELECT  * FROM products ORDER BY created_at DESC LIMIT $1 OFFSET $2;
+
+-- name: GetProductByID :one
+SELECT * FROM products WHERE id=$1;

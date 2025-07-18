@@ -11,6 +11,46 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const acknowledgeAlert = `-- name: AcknowledgeAlert :exec
+UPDATE alerts set status="acknowledged" WHERE status="pending"
+`
+
+func (q *Queries) AcknowledgeAlert(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, acknowledgeAlert)
+	return err
+}
+
+const acknowledgeAlerts = `-- name: AcknowledgeAlerts :many
+SELECT id, product_id, alert_message, alert_type, status, created_at FROM alerts WHERE status="acknowledged"
+`
+
+func (q *Queries) AcknowledgeAlerts(ctx context.Context) ([]Alert, error) {
+	rows, err := q.db.Query(ctx, acknowledgeAlerts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Alert
+	for rows.Next() {
+		var i Alert
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductID,
+			&i.AlertMessage,
+			&i.AlertType,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createAlert = `-- name: CreateAlert :exec
 INSERT INTO alerts (product_id,alert_message,alert_type,status) VALUES ($1,$2,$3,$4) RETURNING  id, product_id, alert_message, alert_type, status, created_at
 `
@@ -38,6 +78,37 @@ SELECT id, product_id, alert_message, alert_type, status, created_at FROM alerts
 
 func (q *Queries) GetAlertsByStatus(ctx context.Context, status interface{}) ([]Alert, error) {
 	rows, err := q.db.Query(ctx, getAlertsByStatus, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Alert
+	for rows.Next() {
+		var i Alert
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProductID,
+			&i.AlertMessage,
+			&i.AlertType,
+			&i.Status,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllAlerts = `-- name: GetAllAlerts :many
+SELECT id, product_id, alert_message, alert_type, status, created_at FROM alerts ORDER BY created_at DESC
+`
+
+func (q *Queries) GetAllAlerts(ctx context.Context) ([]Alert, error) {
+	rows, err := q.db.Query(ctx, getAllAlerts)
 	if err != nil {
 		return nil, err
 	}
@@ -136,5 +207,19 @@ type UpdateAlertParams struct {
 
 func (q *Queries) UpdateAlert(ctx context.Context, arg UpdateAlertParams) error {
 	_, err := q.db.Exec(ctx, updateAlert, arg.ID, arg.Status)
+	return err
+}
+
+const updateAlertType = `-- name: UpdateAlertType :exec
+UPDATE alerts SET alert_type=$2 WHERE id=$1
+`
+
+type UpdateAlertTypeParams struct {
+	ID        pgtype.UUID
+	AlertType interface{}
+}
+
+func (q *Queries) UpdateAlertType(ctx context.Context, arg UpdateAlertTypeParams) error {
+	_, err := q.db.Exec(ctx, updateAlertType, arg.ID, arg.AlertType)
 	return err
 }
